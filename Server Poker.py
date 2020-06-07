@@ -508,6 +508,7 @@ class Poker(object): #the whole game mechanics
 
 
 async def GetUser(websocket, path):
+        while True:
             async for message in websocket:
                 Player = message.split("#")
                 try:
@@ -534,6 +535,7 @@ async def GetUser(websocket, path):
 
 
 async def Connect(websocket, path):
+    print("connect")
     try:
         await asyncio.wait_for(GetUser(websocket, path),timeout=13)
     except asyncio.TimeoutError:
@@ -542,7 +544,6 @@ async def Connect(websocket, path):
     await GiveCards (Game, websocket)
     if len(USERS) >1:
         await Round1(Game,websocket)
-        print("here")
 
 
 async def GiveCards (Poker, websocket):
@@ -578,7 +579,7 @@ async def Round1(Poker,websocket):
         currectTurn = 1
         while True:
             currectTurn +=1
-            await TurnManager(TurnPerUser[(currectTurn%turnman)])TRJH
+            await asyncio.wait_for(TurnManager(TurnPerUser[(currectTurn%turnman)]),timeout=10)
 
 
 
@@ -631,7 +632,7 @@ async def TurnManager(user):
         return "check",str(result)
 async def RegularTurn(websocket,checkorcall,user, Maxbet):
     async for message in websocket:
-        if (messege == "call"):
+        if (message == "call"):
             await call(user,Maxbet)
             
 
@@ -654,10 +655,11 @@ async def check(user):
     # clients
     print("hello")
 
+
 start_server = websockets.serve(Connect, "localhost", 8765)
-while(len(Players)<1):
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
 Game = Poker(3)
 i =0
 while(i!=10):

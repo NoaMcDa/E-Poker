@@ -22,6 +22,16 @@ def cutCard(location, CardDeck):
     return card
 
 
+class Player(object):
+
+    def __init__(self,hand,money,name):
+        self.hand = hand
+        self.money = money
+        self.name = name
+
+    def bet(self, money):
+
+
 class Card(object):
     RANKS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
 
@@ -158,6 +168,8 @@ class Poker(object):  # the whole game mechanics
             TheCard = deck.deal()
             self.flop[TheCard[0]] = TheCard[1]
             print(TheCard[0], TheCard[1])
+
+        for numPlayer in len(self.hands):
 
         # needs to get bets
         self.flop4()
@@ -515,16 +527,6 @@ class Poker(object):  # the whole game mechanics
 
 
 def main():
-    window = tkinter.Tk()
-    Backg = Image.open(r"C:\Users\noada\PycharmProjects\Poker\Game Poker\Background.jpg")
-    Background = ImageTk.PhotoImage(Backg)
-    BgroundCanvas = tkinter.Canvas(window, width=1000, height=600)
-    BgroundCanvas.place(x=0, y=0)
-    BgroundCanvas.create_image(0, 0, anchor="nw", image=Background)
-
-    CardDeck = Image.open(r"C:\Users\noada\PycharmProjects\Poker\Game Poker\Carddeck.jpg")
-
-    window.title("Poker")
 
     Game = Poker(3)
     i = 0
