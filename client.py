@@ -23,14 +23,14 @@ def login_server(sock, username, password):
     raise Exception('Unexpected: ' + connect_result)
 
 
-MENU = '1 - check\n2 - bet\n3 - fold\n4 - call'
+MENU = '1 - check/call\n2 - bet\n3 - fold'
 
 
 def play_turn(sock, game_state):
     print('Current game state: TODO print the object')
 
     choice = -1
-    while not 1 <= choice <= 4:
+    while not 1 <= choice <= 3:
         print('Please choose from the following\n' + MENU)
         choice = int(input())
 
@@ -40,8 +40,7 @@ def play_turn(sock, game_state):
         pass
     elif choice == 3:
         pass
-    elif choice == 4:
-        pass
+
 
 
 def client_main():

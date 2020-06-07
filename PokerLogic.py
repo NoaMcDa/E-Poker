@@ -4,7 +4,7 @@ import tkinter
 from PIL import ImageTk, Image
 
 RANKS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
-Players = []  # has to have user and money
+  # has to have user and money
 users = {"Amy": "11"}
 SUITS = ('S', 'D', 'H', 'C')
 
@@ -24,14 +24,29 @@ def cutCard(location, CardDeck):
 
 class Player(object):
 
-    def __init__(self,hand,money,name):
+    def __init__(self,hand,money,name,currect_bet):
         self.hand = hand
         self.money = money
         self.name = name
+        self.currect_bet = currect_bet
 
+    def canbet(self):
+        if self.money >0:
+            return True
+        return False
     def bet(self, money):
+        if (self.canbet()):
+            if (self.money > money):
+                self.money -= money
+            else:
+                self.money = 0
+            self.currect_bet += money
+            print("player {} current bet {}".format(self.name,self.currect_bet))
+        else:
+            print("cant bet anymore")
 
-
+    def clean_bets (self):
+        self.currect_bet = 0
 class Card(object):
     RANKS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
 
@@ -120,6 +135,7 @@ class Poker(object):  # the whole game mechanics
     def __init__(self, numHands):
         deck.shuffle()
         self.hands = []
+        self.Players = []
         self.tlist = []  # create a list to store total_point
         self.savecards = {}
         self.flop = {}
@@ -132,6 +148,8 @@ class Poker(object):  # the whole game mechanics
             for j in range(numCards_in_Hand):
                 TheCard = deck.deal()
                 hand[TheCard[0]] = TheCard[1]
+            player = Player(hand,1000,str(i),0) #change definition
+            self.Players.append(player)
             self.hands.append(hand)
 
     def sortHand(self, hand):  # supposed to be 7 cards now
@@ -156,7 +174,108 @@ class Poker(object):  # the whole game mechanics
             for card in self.hands[i]:
                 hand = hand + str(card) + ' '
             print('Hand ' + str(i + 1) + ': ' + hand)
+
+        self.StartRound(True)
         self.flop3()
+
+    def manage_blinds(self):
+        smallblind = 10
+        bigblind = 20
+        try:
+            self.Players[0].bet(smallblind)
+
+            self.Players[1].bet(bigblind)
+        except:
+            print("not enough players")
+
+    def StartRound(self,bool):
+        flag = False
+        if (bool):
+            self.manage_blinds()
+            GameTurn = 2
+        else:
+            GameTurn = 0
+        num_players = len(self.Players)
+        while True:
+            stop = self.manageBets(self.Players[GameTurn%num_players])
+            GameTurn +=1
+            maxbet = self.find_max_bet()
+            flag = self.check_finish(maxbet)
+            if flag:
+                break
+    def check_finish(self,maxbet):
+        '''
+        checks if the turns are finished
+        '''
+        for player in self.Players:
+            if (player.money > 0 and player.currect_bet != maxbet):
+                return False
+        return True
+
+
+
+    def manageBets(self,player):
+        '''
+        getting the action from player
+        '''
+        actions = ["call","bet","fold","check"]
+        maxbet = self.find_max_bet()
+        if(player.money> 0):
+            print("player {} current bet {}".format(player.name, player.currect_bet))
+            if ( player.currect_bet==maxbet):
+
+                actions.remove("call")
+                print("removed call")
+            else:
+                actions.remove("check")
+                print("removed check")
+            self.client_respond(actions,player,maxbet)
+        else:
+            print("player %s doesnt have money" %player.name)
+    def client_respond(self,actions,player,maxbet):
+        flag = True
+        while flag:
+            print(" player {}: {} {} or {} ?".format(player.name,actions[0],actions[1],actions[2]))
+            response = input()
+            data = response.split(" ")
+            if data[0] in actions:
+                if data[0] == "bet":
+                    try:
+                        if (maxbet/2 <= int(data[1]) or player.money < maxbet*2):
+                            print(data[1])
+                            player.bet(int(data[1]))
+                            print("player {} betted {}" % player.name % data[1])
+                            print(player.name, player.currect_bet)
+                            flag = False
+                        else:
+                            print("needs to bet x2 from max bet which is %s or more." %maxbet)
+
+                    except:
+                        print("not a number try again")
+                if data[0] == "call":
+                    flag = False
+                    player.bet(maxbet-player.currect_bet)
+                    print("player %s call"  %player.name)
+                if data[0] == "check":
+                    flag = False
+                    player.bet(maxbet)
+                    print("player %s check"  %player.name)
+                    print(player.name, player.currect_bet)
+                if data[0] == "fold":
+                    flag = False
+                    print("player %s fold", player.name)
+
+                    self.Players.remove(player)
+
+
+
+    def find_max_bet(self):
+        maxbet = self.Players[0].currect_bet
+        for player in self.Players:
+            if (player.currect_bet > maxbet):
+                maxbet = player.currect_bet
+
+        return maxbet
 
     def flop3(self):
 
@@ -169,7 +288,6 @@ class Poker(object):  # the whole game mechanics
             self.flop[TheCard[0]] = TheCard[1]
             print(TheCard[0], TheCard[1])
 
-        for numPlayer in len(self.hands):
 
         # needs to get bets
         self.flop4()
