@@ -24,11 +24,12 @@ def cutCard(location, CardDeck):
 
 class Player(object):
 
-    def __init__(self,hand,money,name,currect_bet):
+    def __init__(self,hand,money,name,currect_bet,fold):
         self.hand = hand
         self.money = money
         self.name = name
         self.currect_bet = currect_bet
+        self.fold = fold
 
     def canbet(self):
         if self.money >0:
@@ -41,12 +42,14 @@ class Player(object):
             else:
                 self.money = 0
             self.currect_bet += money
-            print("player {} current bet {}".format(self.name,self.currect_bet))
         else:
             print("cant bet anymore")
 
     def clean_bets (self):
         self.currect_bet = 0
+
+    def folds(self):
+        self.fold = True
 class Card(object):
     RANKS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
 
@@ -148,7 +151,7 @@ class Poker(object):  # the whole game mechanics
             for j in range(numCards_in_Hand):
                 TheCard = deck.deal()
                 hand[TheCard[0]] = TheCard[1]
-            player = Player(hand,1000,str(i),0) #change definition
+            player = Player(hand,1000,str(i),0,False) #change definition
             self.Players.append(player)
             self.hands.append(hand)
 
@@ -197,41 +200,50 @@ class Poker(object):  # the whole game mechanics
             GameTurn = 0
         num_players = len(self.Players)
         while True:
-            stop = self.manageBets(self.Players[GameTurn%num_players])
+            maxbet = self.find_max_bet()
+            if (self.Players[GameTurn%num_players].fold == False):
+                stop = self.manageBets(self.Players[GameTurn%num_players],maxbet)
+            else:
+                stop = False
             GameTurn +=1
             maxbet = self.find_max_bet()
-            flag = self.check_finish(maxbet)
-            if flag:
-                break
+
+            if (GameTurn>=num_players ):
+                if stop:
+                    flag = self.check_finish(maxbet)
+                if flag:
+                    break
     def check_finish(self,maxbet):
         '''
         checks if the turns are finished
         '''
         for player in self.Players:
-            if (player.money > 0 and player.currect_bet != maxbet):
-                return False
+            if (player.fold!= True):
+                if (player.money > 0 and player.currect_bet != maxbet):
+                    return False
         return True
 
 
 
-    def manageBets(self,player):
+    def manageBets(self,player,maxbet):
         '''
         getting the action from player
         '''
         actions = ["call","bet","fold","check"]
-        maxbet = self.find_max_bet()
+
         if(player.money> 0):
             print("player {} current bet {}".format(player.name, player.currect_bet))
             if ( player.currect_bet==maxbet):
 
                 actions.remove("call")
-                print("removed call")
             else:
                 actions.remove("check")
-                print("removed check")
-            self.client_respond(actions,player,maxbet)
+            boole =  self.client_respond(actions,player,maxbet)
         else:
             print("player %s doesnt have money" %player.name)
+
+        return boole
+
     def client_respond(self,actions,player,maxbet):
         flag = True
         while flag:
@@ -241,10 +253,9 @@ class Poker(object):  # the whole game mechanics
             if data[0] in actions:
                 if data[0] == "bet":
                     try:
-                        if (maxbet/2 <= int(data[1]) or player.money < maxbet*2):
-                            print(data[1])
-                            player.bet(int(data[1]))
-                            print("player {} betted {}" % player.name % data[1])
+                        if (maxbet*2 <= int(data[1])+player.currect_bet or player.money < maxbet*2):
+                            player.bet(int(data[1])-player.currect_bet)
+                            print("player {} betted {}".format(player.name, data[1]))
                             print(player.name, player.currect_bet)
                             flag = False
                         else:
@@ -255,18 +266,19 @@ class Poker(object):  # the whole game mechanics
                 if data[0] == "call":
                     flag = False
                     player.bet(maxbet-player.currect_bet)
-                    print("player %s call"  %player.name)
+                    print("player {} called {}".format(player.name,player.currect_bet))
                 if data[0] == "check":
                     flag = False
-                    player.bet(maxbet)
                     print("player %s check"  %player.name)
                     print(player.name, player.currect_bet)
+                    return True
                 if data[0] == "fold":
                     flag = False
-                    print("player %s fold", player.name)
+                    print("player fold", player.name)
+                    player.folds()
 
-                    self.Players.remove(player)
 
+        return False
 
 
     def find_max_bet(self):
@@ -277,7 +289,12 @@ class Poker(object):  # the whole game mechanics
 
         return maxbet
 
+    def clear_current_bets(self):
+        for player in self.Players:
+            player.clean_bets()
+
     def flop3(self):
+        self.clear_current_bets()
 
         # if everyone is out the last hand wins
         flopnum = 3
@@ -288,11 +305,12 @@ class Poker(object):  # the whole game mechanics
             self.flop[TheCard[0]] = TheCard[1]
             print(TheCard[0], TheCard[1])
 
-
+        self.StartRound(False)
         # needs to get bets
         self.flop4()
 
     def flop4(self):
+        self.clear_current_bets()
         # if everyone is out the last hand wins
         flopnum = 1
         card = (0, 'a')
@@ -302,9 +320,11 @@ class Poker(object):  # the whole game mechanics
             self.flop[TheCard[0]] = TheCard[1]
             print(TheCard[0], TheCard[1])
         # needs to get bets
+        self.StartRound(False)
         self.flop5()
 
     def flop5(self):
+        self.clear_current_bets()
         # if everyone is out the last hand wins
         flopnum = 1
         card = (0, 'a')
@@ -313,6 +333,9 @@ class Poker(object):  # the whole game mechanics
             TheCard = deck.deal()
             self.flop[TheCard[0]] = TheCard[1]
             print(TheCard[0], TheCard[1])
+
+        self.StartRound(False)
+
         for hand in self.hands:
             cards = list(hand.keys())
             for c in cards:
