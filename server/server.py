@@ -1,4 +1,4 @@
-import string, math, random
+import random
 
 
 class Card(object):

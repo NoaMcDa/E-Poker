@@ -1,7 +1,6 @@
 import socket
 
-import constants
-import poker_protocol
+from shared import constants, poker_protocol
 
 
 def login_server(sock, username, password):
@@ -42,19 +41,19 @@ def play_turn(sock, game_state):
         pass
 
 
-
 def client_main():
     # For now lets assume I am registered.
     # TODO: add register feature
 
     # Connect to server
+    print('Connecting to server...')
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((constants.DEFAULT_SERVER_IP, constants.DEFAULT_SERVER_PORT))
 
     print('Enter username and password')
     username, password = input().split()
 
-    username, password = username.trim(), password.trim()  # remove whitespace
+    username, password = username.strip(), password.strip()  # remove whitespace
     if not login_server(sock, username, password):
         print('Failed to login, please register TODO')
         exit(1)
@@ -71,7 +70,7 @@ def client_main():
     while True:
         game_state = poker_protocol.recv_obj(sock)  # Receive GameState object
 
-        # TODO: if game_state.is_my_turn(), then play turn
+        # TODO: if game_state.is_my_turn(), then play turn. else continue..
         play_turn(sock, game_state)
 
 
