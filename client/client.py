@@ -1,5 +1,6 @@
 import socket
 
+from client.game import Game
 from shared import constants, poker_protocol
 
 
@@ -42,6 +43,8 @@ def play_turn(sock, game_state):
 
 
 def client_main():
+    game = Game()
+    game.start()
     # For now lets assume I am registered.
     # TODO: add register feature
 
