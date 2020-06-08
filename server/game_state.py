@@ -1,10 +1,23 @@
+class ClientGameState(object):
+    """
+    Information object for clients
+    """
 
-class GameState(object):
-    """
-    sending the client the gamestate, positions of all players and his turn, so we can present it in the graphics
-    """
-    def __init__(self,player,turn,end_game,flop):
-        self.turn = turn
+    def __init__(self, player, is_my_turn, game_has_ended, flop, winner=None):
+        """
+
+        :type player: TODO
+        :type is_my_turn: bool
+        :type game_has_ended: bool
+        :type flop: TODO
+        :type winner: str
+        """
+        self.is_my_turn = is_my_turn
         self.player = player
-        self.end_game = end_game
+        self.game_has_ended = game_has_ended
         self.flop = flop
+        self.winner = winner
+
+    def __str__(self):
+        # TODO improve this
+        return '[flop={flop}, ]'.format(flop=self.flop)

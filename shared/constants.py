@@ -2,7 +2,7 @@ DEFAULT_SERVER_IP = '127.0.0.1'
 DEFAULT_SERVER_PORT = 9999
 
 # Poker protocol
-LOGIN_SUCCESS = 'SUCCESS'
+LOGIN_SUCCESS = 'SUCCESS' # TODO: replace with the relevant protocol messages
 LOGIN_FAIL = 'FAIL'
 START_MESSAGE = 'START'
 

@@ -2,6 +2,7 @@
   <dictionary name="erezs">
     <words>
       <w>pygame</w>
+      <w>recv</w>
     </words>
   </dictionary>
 </component>
