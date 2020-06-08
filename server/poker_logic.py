@@ -126,7 +126,49 @@ class Deck(object):  # creating deck of 54 cards
         else:
             return Cards[0], self.deck.pop(Cards.pop(0))  # returns a tuple!!!
 
+class GameState(object):
+    """
+    sending the client the gamestate, positions of all players and his turn, so we can present it in the graphics
+    """
+    def __init__(self,player,turn,end_game,array_players):
+        self.turn = turn
+        self.player = player
+        self.end_game = end_game
+        self.display_players = array_players
+        """
+    def arrange_positions(self,players):
+        '''
+        sending the client the current positions of each players on the gameboard
+        supposed to work beacuse each player is on the players list
+        '''
+        DisplayPlayers = []
+        for i in len(players):
+            if players[i] == self.player:
+                if (self.end_game):
+                    for p in players:
+                        if p != self.player:
+                            DisplayPlayers.append(p)
+                else:
+                    for p in players:
+                        if p != self.player:
+                            p
+                            DisplayPlayers.append(p)
+                break
+                
+        return DisplayPlayers
 
+    def myTurn(self):
+        '''
+        changing the turn
+        '''
+        self.turn = not self.turn
+        
+    def UpdateClientInfo(self):        
+        '''
+        sending the client himself, bool turn , and the arranged positions of the other players
+        '''
+        return self.player,self.turn,self.arrange_positions()
+ """
 class Poker(object):  # the whole game mechanics
     global deck  # ????
     deck = Deck()  # ????
@@ -187,10 +229,10 @@ class Poker(object):  # the whole game mechanics
         except:  # TODO: catch the correct exception.
             print("not enough players")
 
-    # TODO: rename bool_value to something meaningful!
-    def start_round(self, bool_value):
+
+    def start_round(self, game_beginning):
         flag = False
-        if bool_value:
+        if game_beginning:
             self.manage_blinds()
             GameTurn = 2
         else:
@@ -225,8 +267,8 @@ class Poker(object):  # the whole game mechanics
         getting the action from player
         """
         actions = ["call", "bet", "fold", "check"]
+        check_finish_true = False
 
-        # TODO please initialize boole with some value to avoid an edge case
         if player.money > 0:
             print("player {} current bet {}".format(player.name, player.correct_bet))
             if player.correct_bet == max_bet:
@@ -234,12 +276,12 @@ class Poker(object):  # the whole game mechanics
                 actions.remove("call")
             else:
                 actions.remove("check")
-            #     TODO rename this
-            boole = self.client_respond(actions, player, max_bet)
+
+            check_finish_true = self.client_respond(actions, player, max_bet)
         else:
             print("player %s doesnt have money" % player.name)
 
-        return boole
+        return check_finish_true
 
     @staticmethod
     def client_respond(actions, player, max_bet):
@@ -266,10 +308,9 @@ class Poker(object):  # the whole game mechanics
                     player.bet(max_bet - player.correct_bet)
                     print("player {} called {}".format(player.name, player.correct_bet))
                 if data[0] == "check":
-                    flag = False  # no need if we return here TODO
                     print("player %s check" % player.name)
                     print(player.name, player.correct_bet)
-                    return True  # are you sure? TODO
+                    return True
                 if data[0] == "fold":
                     flag = False
                     print("player fold", player.name)
