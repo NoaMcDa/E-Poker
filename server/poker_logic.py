@@ -170,11 +170,9 @@ class GameState(object):
         return self.player,self.turn,self.arrange_positions()
  """
 class Poker(object):  # the whole game mechanics
-    global deck  # ????
-    deck = Deck()  # ????
-
     def __init__(self, num_hands):
-        deck.shuffle()
+        self.deck = Deck()
+        self.deck.shuffle()
         self.hands = []
         self.players = []
         self.tlist = []  # create a list to store total_point
@@ -187,7 +185,7 @@ class Poker(object):  # the whole game mechanics
             card = (0, 'a')
             the_card = (card, (0, 0))
             for j in range(numCards_in_Hand):
-                the_card = deck.deal()
+                the_card = self.deck.deal()
                 hand[the_card[0]] = the_card[1]
             player = Player(hand, 1000, str(i), 0, False)  # change definition
             self.players.append(player)
@@ -210,7 +208,7 @@ class Poker(object):  # the whole game mechanics
         # if everyone is out the last hand wins
         self.flop = {}
         self.save_cards = {}
-        deck.shuffle()
+        self.deck.shuffle()
         for i in range(len(self.hands)):
             hand = ''
             for card in self.hands[i]:
@@ -338,7 +336,7 @@ class Poker(object):  # the whole game mechanics
         card = (0, 'a')
         the_card = (card, (0, 0))
         for j in range(flop_num):
-            the_card = deck.deal()
+            the_card = self.deck.deal()
             self.flop[the_card[0]] = the_card[1]
             print(the_card[0], the_card[1])
 
@@ -355,7 +353,7 @@ class Poker(object):  # the whole game mechanics
         card = (0, 'a')
         the_card = (card, (0, 0))
         for j in range(flopnum):
-            the_card = deck.deal()
+            the_card = self.deck.deal()
             self.flop[the_card[0]] = the_card[1]
             print(the_card[0], the_card[1])
 
@@ -370,7 +368,7 @@ class Poker(object):  # the whole game mechanics
         card = (0, 'a')
         the_card = (card, (0, 0))
         for j in range(flop_num):
-            the_card = deck.deal()
+            the_card = self.deck.deal()
             self.flop[the_card[0]] = the_card[1]
             print(the_card[0], the_card[1])
 
@@ -718,10 +716,10 @@ class Poker(object):  # the whole game mechanics
     def end_game(self):
         savedCard = list(self.save_cards.keys())
         for card in savedCard:
-            deck.deck[card] = self.save_cards[card]
+            self.deck.deck[card] = self.save_cards[card]
         for card in self.flop:
-            deck.deck[card] = self.flop[card]
-        deck.shuffle()
+            self.deck.deck[card] = self.flop[card]
+        self.deck.shuffle()
         self.hands = []
         self.tlist = []  # create a list to store total_point
         self.save_cards = {}
