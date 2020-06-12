@@ -294,7 +294,6 @@ class Poker(object):  # the whole game mechanics
                         if max_bet * 2 <= int(data[1]) + player.correct_bet or player.money < max_bet * 2:
                             player.bet(int(data[1]) - player.correct_bet)
                             print("player {} betted {}".format(player.name, data[1]))
-                            print(player.name, player.correct_bet)
                             flag = False
                         else:
                             print("needs to bet x2 from max bet which is %s or more." % max_bet)
@@ -393,9 +392,10 @@ class Poker(object):  # the whole game mechanics
         c_sum = 0
         ranklist = []
         for card in sortedHand:
-            ranklist.append(card.rank)
+            ranklist.append(card[0])
         c_sum = ranklist[0] * 13 ** 4 + ranklist[1] * 13 ** 3 + ranklist[2] * 13 ** 2 + ranklist[3] * 13 + ranklist[4]
         return c_sum
+    #TODO: sum point for fullhouse
 
     def is_royal(self, hand):
         """
@@ -463,10 +463,13 @@ class Poker(object):  # the whole game mechanics
                     if card not in list_cards:
                         res = False
                         break
-            total_point = h * 13 ** 5  # fix
+
+
+            total_point = h * 13 ** 5
             if res == False:
                 index += 1
             else:
+                total_point = total_point + self.point(straightFlush)
                 break
             if index == 3:
                 flag = False
@@ -504,6 +507,15 @@ class Poker(object):  # the whole game mechanics
             if index == 4:
                 break
         if not flag:
+            biggest_rank_in_hand = 0
+            biggest_rank_in_hand_suit = 'X'
+            for card in hand:
+                if card not in Four:
+                    if (card[0] > biggest_rank_in_hand):
+                        biggest_rank_in_hand = card[0]
+                        biggest_rank_in_hand_suit = card[1]
+            Four.append((biggest_rank_in_hand,biggest_rank_in_hand_suit))
+            total_point = h * 13 ** 5 + self.point(Four)
             self.tlist.append(total_point)
             self.is_full(sortedHand)
         else:
@@ -529,6 +541,7 @@ class Poker(object):  # the whole game mechanics
             flag = False
             self.is_flush(sortedHand)
         else:
+            saved_suits = []
             count2 = 0
             count3 = 0
             for card in isFullHouse.keys():
@@ -542,7 +555,29 @@ class Poker(object):  # the whole game mechanics
                 flag = True
                 # we need to get the highest ranks
             if flag:
+                biggest_rank_three = 0
+                biggest_rank_three_suits = []
+                biggest_rank_two = 0
+                biggest_rank_two_suits = []
+                for card in sortedHand:
+                    if (isFullHouse[card[0]] == 3):
+                        if ( biggest_rank_three < card[0]):
+                            biggest_rank_three = card[0]
+                            biggest_rank_three_suits = []
+                            biggest_rank_three_suits.append(card[1])
+                        elif (biggest_rank_three == card[0]):
+                            biggest_rank_three_suits.append(card[1])
+                for card in sortedHand:
+                    if (isFullHouse[card[0]] == 3 and biggest_rank_three != card[0] or isFullHouse[card[0]] == 2):
+                        if (biggest_rank_two < card[0]):
+                            biggest_rank_two= card[0]
+                            biggest_rank_two_suits = []
+                            biggest_rank_two_suits.append(card[1])
+                        elif (biggest_rank_two == card[0]):
+                            biggest_rank_two_suits.append(card[1])
+                FullHouse = [(biggest_rank_three, biggest_rank_three_suits[0]),(biggest_rank_three, biggest_rank_three_suits[1]),(biggest_rank_three, biggest_rank_three_suits[2]),(biggest_rank_two, biggest_rank_two_suits[0]),(biggest_rank_two, biggest_rank_two_suits[1])]
                 print('Full House')
+                total_point =  h * 13 ** 5 + self.point(FullHouse)
                 self.tlist.append(total_point)
             else:
                 self.is_flush(sortedHand)
