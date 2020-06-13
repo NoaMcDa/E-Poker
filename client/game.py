@@ -37,3 +37,5 @@ class Game(object):
         self.screen.blit(self.background_image, self.background_rect)
         # self.screen.fill(self.setting.background_color)
         pygame.display.flip()
+
+

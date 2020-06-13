@@ -76,7 +76,6 @@ class GameSession(object):
             print('Please choose from the following\n' + GameSession.MENU)
             choice = int(input())
 
-        # TODO talk with noa
         if choice == 1:
             pass
         elif choice == 2:
