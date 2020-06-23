@@ -1,3 +1,8 @@
+import os
+
+os.environ['SDL_VIDEO_CENTERED'] = '1'
+
+
 def main():
     print('Please choose \'client\' / \'c\' or \'server\' / \'s\': ', end='')
     choice = input().lower()
@@ -7,8 +12,9 @@ def main():
         client.client_main()
     elif choice == 'server' or choice == 's':
         pass
-        # import server.server
-        # TODO: import server file with server_main() function and run it...
+        import server.server as serv
+        serv.server_main()
+
     else:
         print('Bad choice. Bye.')
 
