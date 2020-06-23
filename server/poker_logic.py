@@ -1,10 +1,16 @@
 import random
+from typing import List
+
+from shared import constants
+from shared import protocol
+from shared.protocol import NetworkConnection
 
 RANKS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
-# has to have user and money
-users = {"Amy": "11"}
+
 SUITS = ('S', 'D', 'H', 'C')
 
+
+# TODO: MIGHT HAVE SOME TYPE IFS THAT ARE BAD -FIX THAT
 
 def cut_card(location, card_deck):
     x, y = location
@@ -20,7 +26,66 @@ def cut_card(location, card_deck):
 
 
 class Player(object):
-    def __init__(self, hand, money, name, correct_bet, fold):
+    def __init__(self, network_connection):
+        """
+        :type network_connection: NetworkConnection
+        """
+        self._network_connection = network_connection
+
+        self.hand = None
+        self.money = None
+        self.name = None
+        self.correct_bet = None
+        self.fold = None
+
+    def send_name(self):
+        self._network_connection.send_obj(protocol.SendNameMessage(self.name))
+
+    def send_its_your_turn(self):
+        self._network_connection.send_obj(protocol.ItsYourTurnMessage())
+
+    def send_hand(self):
+        self._network_connection.send_obj(protocol.HandPerUser(self.hand))
+
+    def send_move_of_another_player(self, player_move):
+        self._network_connection.send_obj(player_move)
+
+    def recv_money(self):
+        money = self._network_connection.recv_obj()
+        return money
+
+    def send_winner(self, player_list):
+        player_names = [player.name for player in player_list]
+        self._network_connection.send_obj(protocol.PlayerWinnerMessage(player_names))
+
+    def recv_move(self):
+        """
+        :return:
+        """
+        move = self._network_connection.recv_obj()
+        # TODO: MAYBE ASSERT
+        return move
+
+    def send_blind_sum(self, blind_sum):
+        """
+        takes a certain amount of starting money at the beginning
+        :param blind_sum: int
+        :return:
+        """
+        self._network_connection.send_obj(protocol.SendBlindMessage(blind_sum))
+
+    def send_flop_cards(self, array_flop):
+        self._network_connection.send_obj(protocol.SendCardFlop(array_flop))
+
+    def send_turn_state(self, turn_state):  # success or failure
+        turn_state_object = protocol.TurnStateMessage(turn_state)
+        self._network_connection.send_obj(turn_state_object)
+
+    def send_sum_money(self, sum_money):
+        self.money += sum_money
+        self._network_connection.send_obj(protocol.SendTotalSumOnTable(sum_money))
+
+    def start_game(self, hand, money, name, correct_bet, fold):
         self.hand = hand
         self.money = money
         self.name = name
@@ -48,46 +113,6 @@ class Player(object):
         self.fold = True
 
 
-class Card(object):
-    RANKS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
-    SUITS = ('S', 'D', 'H', 'C')
-
-    def __init__(self, rank, suit):
-        self.rank = rank
-        self.suit = suit
-
-    def __str__(self):
-        if self.rank == 14:
-            rank = 'A'
-        elif self.rank == 13:
-            rank = 'K'
-        elif self.rank == 12:
-            rank = 'Q'
-        elif self.rank == 11:
-            rank = 'J'
-        else:
-            rank = self.rank
-        return str(rank) + self.suit
-
-    def __eq__(self, other):
-        return self.rank == other.rank
-
-    def __ne__(self, other):
-        return self.rank != other.rank
-
-    def __lt__(self, other):
-        return self.rank < other.rank
-
-    def __le__(self, other):
-        return self.rank <= other.rank
-
-    def __gt__(self, other):
-        return self.rank > other.rank
-
-    def __ge__(self, other):
-        return self.rank >= other.rank
-
-
 class Deck(object):  # creating deck of 54 cards
     Cards = []
 
@@ -95,13 +120,13 @@ class Deck(object):  # creating deck of 54 cards
         self.deck = {}
         self.xDeck = 0
         self.yDeck = 0
-        for suit in Card.SUITS:  # creating sorted deck
-            for rank in Card.RANKS:
+        for suit in SUITS:  # creating sorted deck
+            for rank in RANKS:
                 card = (rank, suit)
                 self.deck[card] = (self.xDeck, self.yDeck)
                 self.xDeck += 100
             self.xDeck = 0
-            self.yDeck += 140
+            self.yDeck += 130
 
     def shuffle(self):
         Cards = list(self.deck.keys())
@@ -113,9 +138,6 @@ class Deck(object):  # creating deck of 54 cards
             i += 1
         self.deck = NewDeck
 
-        # for key in self.deck:
-        #     print (key , self.deck[key])
-
     def __len__(self):
         return len(self.deck)
 
@@ -126,51 +148,16 @@ class Deck(object):  # creating deck of 54 cards
         else:
             return Cards[0], self.deck.pop(Cards.pop(0))  # returns a tuple!!!
 
-class GameState(object):
-    """
-    sending the client the gamestate, positions of all players and his turn, so we can present it in the graphics
-    """
-    def __init__(self,player,turn,end_game,array_players):
-        self.turn = turn
-        self.player = player
-        self.end_game = end_game
-        self.display_players = array_players
-        """
-    def arrange_positions(self,players):
-        '''
-        sending the client the current positions of each players on the gameboard
-        supposed to work beacuse each player is on the players list
-        '''
-        DisplayPlayers = []
-        for i in len(players):
-            if players[i] == self.player:
-                if (self.end_game):
-                    for p in players:
-                        if p != self.player:
-                            DisplayPlayers.append(p)
-                else:
-                    for p in players:
-                        if p != self.player:
-                            p
-                            DisplayPlayers.append(p)
-                break
-                
-        return DisplayPlayers
 
-    def myTurn(self):
-        '''
-        changing the turn
-        '''
-        self.turn = not self.turn
-        
-    def UpdateClientInfo(self):        
-        '''
-        sending the client himself, bool turn , and the arranged positions of the other players
-        '''
-        return self.player,self.turn,self.arrange_positions()
- """
 class Poker(object):  # the whole game mechanics
-    def __init__(self, num_hands):
+    def __init__(self, client_connections: List[NetworkConnection]):
+        """
+        :type client_connections: int
+        :param client_connections: NetworkConnection
+        """
+
+        num_hands = len(client_connections)
+        self.client_connections = client_connections
         self.deck = Deck()
         self.deck.shuffle()
         self.hands = []
@@ -178,6 +165,7 @@ class Poker(object):  # the whole game mechanics
         self.tlist = []  # create a list to store total_point
         self.save_cards = {}
         self.flop = {}
+        self.sum_money = 0
         numCards_in_Hand = 2
 
         for i in range(num_hands):  # serving cards to each player
@@ -187,7 +175,12 @@ class Poker(object):  # the whole game mechanics
             for j in range(numCards_in_Hand):
                 the_card = self.deck.deal()
                 hand[the_card[0]] = the_card[1]
-            player = Player(hand, 1000, str(i), 0, False)  # change definition
+
+            # RECIVING MONEY FROM CLIENT AND SENDING NAME AND HAND
+            player = Player(self.client_connections[i])
+            player.start_game(hand, 1000, str(i), 0, False)
+            player.send_name()
+            player.send_hand()
             self.players.append(player)
             self.hands.append(hand)
 
@@ -222,34 +215,53 @@ class Poker(object):  # the whole game mechanics
         small_blind = 10
         big_blind = 20
         try:
-            self.players[0].bet(small_blind)
-            self.players[1].bet(big_blind)
+            for i in range(len(self.players)):
+                if i % len(self.players) == 0:
+                    self.players[i].bet(small_blind)
+                    self.players[i].send_blind_sum(small_blind)
+                elif i % len(self.players) == 1:
+                    self.players[i].bet(big_blind)
+                    self.players[i].send_blind_sum(big_blind)
+                else:
+                    self.players[i].send_blind_sum(0)
+
+            self.sum_money += small_blind + big_blind
+            print(self.sum_money)
         except:  # TODO: catch the correct exception.
             print("not enough players")
 
-
     def start_round(self, game_beginning):
-        flag = False
         if game_beginning:
             self.manage_blinds()
-            GameTurn = 2
+            game_turn = 2
         else:
-            GameTurn = 0
+            game_turn = 0
         num_players = len(self.players)
         while True:
             max_bet = self.find_max_bet()
-            if not self.players[GameTurn % num_players].fold:
-                stop = self.manage_bets(self.players[GameTurn % num_players], max_bet)
+            if not self.players[game_turn % num_players].fold:
+                self.players[game_turn % num_players].send_its_your_turn()  # SEND TO THE PLAYER ITS TURN
+                stop, client_move = self.manage_bets(self.players[game_turn % num_players], max_bet)  # GETS THE ACTION
             else:
                 stop = False
-            GameTurn += 1
-            max_bet = self.find_max_bet()
 
-            if GameTurn >= num_players:
+            for player in self.players:
+                if (player is not self.players[game_turn % num_players]):  # SENDS EVERYONE THE OPPONENT MOVE
+                    player.send_move_of_another_player(client_move)
+
+            game_turn += 1
+            max_bet = self.find_max_bet()
+            players_not_folded = []
+            for player in self.players:
+                if not player.fold:
+                    players_not_folded.append(player)
+            if len(players_not_folded) == 1:
+                for player in self.players:
+                    player.send_winner(players_not_folded)  # SENDING THE NAME OF THE WINNER
+            elif game_turn >= num_players:
                 if stop:
-                    flag = self.check_finish(max_bet)
-                if flag:
-                    break
+                    if self.check_finish(max_bet):
+                        break
 
     def check_finish(self, max_bet):
         """
@@ -264,56 +276,82 @@ class Poker(object):  # the whole game mechanics
         """
         getting the action from player
         """
-        actions = ["call", "bet", "fold", "check"]
+        actions = [constants.MOVE_CALL, constants.MOVE_BET, constants.MOVE_FOLD, constants.MOVE_CHECK]
         check_finish_true = False
 
-        if player.money > 0:
+        if player.money > 0 and not player.fold:
             print("player {} current bet {}".format(player.name, player.correct_bet))
             if player.correct_bet == max_bet:
 
-                actions.remove("call")
+                actions.remove(constants.MOVE_CALL)
             else:
-                actions.remove("check")
+                actions.remove(constants.MOVE_CHECK)
 
-            check_finish_true = self.client_respond(actions, player, max_bet)
+            check_finish_true, client_move = self.client_respond(actions, player, max_bet)
+        elif player.fold:
+            print("player folded")
         else:
-            print("player %s doesnt have money" % player.name)
+            print(
+                "player %s doesnt have money " % player.name)  # TODO : DONT EVEN GET TO THIS SITUATION - ALLOW CLIENTS WITH MONEY TO ENTER
 
-        return check_finish_true
+        return check_finish_true, client_move
 
-    @staticmethod
-    def client_respond(actions, player, max_bet):
+    def client_respond(self, actions, player, max_bet):
+        """
+        :param actions:
+        :param player:
+        :param max_bet:
+        :return:
+        """
         flag = True
         while flag:
             print(" player {}: {} {} or {} ?".format(player.name, actions[0], actions[1], actions[2]))
-            response = input()
-            data = response.split(" ")
-            if data[0] in actions:
-                if data[0] == "bet":
-                    try:
-                        if max_bet * 2 <= int(data[1]) + player.correct_bet or player.money < max_bet * 2:
-                            player.bet(int(data[1]) - player.correct_bet)
-                            print("player {} betted {}".format(player.name, data[1]))
-                            flag = False
-                        else:
-                            print("needs to bet x2 from max bet which is %s or more." % max_bet)
+            response = player.recv_move()
 
-                    except:
-                        print("not a number try again")
-                if data[0] == "call":
+            if type(response) is protocol.PlayerMoveBetMessage:
+                try:
+                    if max_bet * 2 <= int(response.bet_amount) + player.correct_bet or player.money < max_bet * 2:
+                        player.bet(int(response.bet_amount) - player.correct_bet)
+                        self.sum_money += int(response.bet_amount)
+                        print(self.sum_money)
+                        print("player {} betted {}".format(player.name, response.bet_amount))
+                        player.send_turn_state(constants.TURN_SUCCESS)
+                        flag = False
+                    else:
+                        print("needs to bet x2 from max bet which is %s or more." % max_bet)
+                        player.send_turn_state(constants.TURN_FAIL + " BET_FAIL")
+
+                except:
+                    print("not a number try again")
+                    player.send_turn_state(constants.TURN_FAIL + " BET_FAIL")
+
+            if type(response) is protocol.PlayerMoveCallMessage:
+                if constants.MOVE_CALL in actions:
+
                     flag = False
                     player.bet(max_bet - player.correct_bet)
+                    self.sum_money += max_bet
+                    print(self.sum_money)
+                    player.send_turn_state(constants.TURN_SUCCESS)
                     print("player {} called {}".format(player.name, player.correct_bet))
-                if data[0] == "check":
+                else:
+                    player.send_turn_state(constants.TURN_FAIL)
+            if type(response) is protocol.PlayerMoveCheckMessage:
+                if constants.MOVE_CHECK in actions:
+
                     print("player %s check" % player.name)
                     print(player.name, player.correct_bet)
-                    return True
-                if data[0] == "fold":
-                    flag = False
-                    print("player fold", player.name)
-                    player.folds()
+                    player.send_turn_state(constants.TURN_SUCCESS)
+                    return True, response
+                else:
+                    player.send_turn_state(constants.TURN_FAIL)
+            if type(response) is protocol.PlayerMoveFoldMessage:
+                flag = False
+                print("player fold", player.name)
+                player.folds()
+                # player.send_turn_state(constants.TURN_SUCCESS)
 
-        return False
+        return False, response
 
     def find_max_bet(self):
         max_bet = self.players[0].correct_bet
@@ -333,11 +371,15 @@ class Poker(object):  # the whole game mechanics
         # if everyone is out the last hand wins
         flop_num = 3
         card = (0, 'a')
-        the_card = (card, (0, 0))
+        array_flop_to_clients = []
         for j in range(flop_num):
             the_card = self.deck.deal()
             self.flop[the_card[0]] = the_card[1]
+            array_flop_to_clients.append((the_card[0], the_card[1]))
             print(the_card[0], the_card[1])
+
+        for player in self.players:
+            player.send_flop_cards(array_flop_to_clients)
 
         self.start_round(False)
 
@@ -348,14 +390,17 @@ class Poker(object):  # the whole game mechanics
         self.clear_current_bets()
 
         # if everyone is out the last hand wins
-        flopnum = 1
-        card = (0, 'a')
-        the_card = (card, (0, 0))
-        for j in range(flopnum):
+        flop_num = 1
+        array_flop_to_clients = []
+
+        for j in range(flop_num):
             the_card = self.deck.deal()
             self.flop[the_card[0]] = the_card[1]
+            array_flop_to_clients.append((the_card[0], the_card[1]))
             print(the_card[0], the_card[1])
 
+        for player in self.players:
+            player.send_flop_cards(array_flop_to_clients)
         # needs to get bets
         self.start_round(False)
         self.flop5()
@@ -364,12 +409,16 @@ class Poker(object):  # the whole game mechanics
         self.clear_current_bets()
         # if everyone is out the last hand wins
         flop_num = 1
-        card = (0, 'a')
-        the_card = (card, (0, 0))
+        array_flop_to_clients = []
+
         for j in range(flop_num):
             the_card = self.deck.deal()
             self.flop[the_card[0]] = the_card[1]
+            array_flop_to_clients.append((the_card[0], the_card[1]))
             print(the_card[0], the_card[1])
+
+        for player in self.players:  # sending the clients the flop cards
+            player.send_flop_cards(array_flop_to_clients)
 
         self.start_round(False)
 
@@ -390,12 +439,21 @@ class Poker(object):  # the whole game mechanics
         """
         sortedHand = sorted(hand, reverse=True)
         c_sum = 0
-        ranklist = []
-        for card in sortedHand:
-            ranklist.append(card[0])
+        ranklist = [card[0] for card in sortedHand]
+
         c_sum = ranklist[0] * 13 ** 4 + ranklist[1] * 13 ** 3 + ranklist[2] * 13 ** 2 + ranklist[3] * 13 + ranklist[4]
         return c_sum
-    #TODO: sum point for fullhouse
+
+    def point_order(self, hand):
+
+        c_sum = (hand[0])[0] * 13 ** 4 + (hand[1])[0] * 13 ** 3 + (hand[2])[0] * 13 ** 2 + (hand[3])[0] * 13 + \
+                (hand[4])[0]
+        return c_sum
+
+    def point_straight(self, hand):
+
+        c_sum = (hand[0]) * 13 ** 4 + (hand[1]) * 13 ** 3 + (hand[2]) * 13 ** 2 + (hand[3]) * 13 + (hand[4])
+        return c_sum
 
     def is_royal(self, hand):
         """
@@ -430,6 +488,7 @@ class Poker(object):  # the whole game mechanics
         if flag:
             print('Royal Flush')
             self.tlist.append(total_point)
+
         else:
             self.isStraightFlush(sortedHand)
 
@@ -464,7 +523,6 @@ class Poker(object):  # the whole game mechanics
                         res = False
                         break
 
-
             total_point = h * 13 ** 5
             if res == False:
                 index += 1
@@ -477,6 +535,7 @@ class Poker(object):  # the whole game mechanics
         if flag:
             print('Straight Flush')
             self.tlist.append(total_point)
+
         else:
             self.is_four(sortedHand)
 
@@ -507,6 +566,8 @@ class Poker(object):  # the whole game mechanics
             if index == 4:
                 break
         if not flag:
+            self.is_full(sortedHand)
+        else:
             biggest_rank_in_hand = 0
             biggest_rank_in_hand_suit = 'X'
             for card in hand:
@@ -514,14 +575,12 @@ class Poker(object):  # the whole game mechanics
                     if (card[0] > biggest_rank_in_hand):
                         biggest_rank_in_hand = card[0]
                         biggest_rank_in_hand_suit = card[1]
-            Four.append((biggest_rank_in_hand,biggest_rank_in_hand_suit))
+            Four.append((biggest_rank_in_hand, biggest_rank_in_hand_suit))
             total_point = h * 13 ** 5 + self.point(Four)
             self.tlist.append(total_point)
-            self.is_full(sortedHand)
-        else:
+
             flag = True
             print('Four of a Kind')
-            # TODO fix
 
     def is_full(self,
                 hand):  # returns the total_point and prints out 'Full House' if true, if false, pass down to isFlush()
@@ -561,7 +620,7 @@ class Poker(object):  # the whole game mechanics
                 biggest_rank_two_suits = []
                 for card in sortedHand:
                     if (isFullHouse[card[0]] == 3):
-                        if ( biggest_rank_three < card[0]):
+                        if (biggest_rank_three < card[0]):
                             biggest_rank_three = card[0]
                             biggest_rank_three_suits = []
                             biggest_rank_three_suits.append(card[1])
@@ -570,15 +629,20 @@ class Poker(object):  # the whole game mechanics
                 for card in sortedHand:
                     if (isFullHouse[card[0]] == 3 and biggest_rank_three != card[0] or isFullHouse[card[0]] == 2):
                         if (biggest_rank_two < card[0]):
-                            biggest_rank_two= card[0]
+                            biggest_rank_two = card[0]
                             biggest_rank_two_suits = []
                             biggest_rank_two_suits.append(card[1])
                         elif (biggest_rank_two == card[0]):
                             biggest_rank_two_suits.append(card[1])
-                FullHouse = [(biggest_rank_three, biggest_rank_three_suits[0]),(biggest_rank_three, biggest_rank_three_suits[1]),(biggest_rank_three, biggest_rank_three_suits[2]),(biggest_rank_two, biggest_rank_two_suits[0]),(biggest_rank_two, biggest_rank_two_suits[1])]
+                FullHouse = [(biggest_rank_three, biggest_rank_three_suits[0]),
+                             (biggest_rank_three, biggest_rank_three_suits[1]),
+                             (biggest_rank_three, biggest_rank_three_suits[2]),
+                             (biggest_rank_two, biggest_rank_two_suits[0]),
+                             (biggest_rank_two, biggest_rank_two_suits[1])]
                 print('Full House')
-                total_point =  h * 13 ** 5 + self.point(FullHouse)
+                total_point = h * 13 ** 5 + self.point_order(FullHouse)
                 self.tlist.append(total_point)
+
             else:
                 self.is_flush(sortedHand)
 
@@ -590,19 +654,33 @@ class Poker(object):  # the whole game mechanics
         list_cards = list(sortedHand.keys())
         h = 6
         is_flush = {}
+        is_flush_ranks = {}
+        is_flush_ranks["S"] = []
+        is_flush_ranks["D"] = []
+        is_flush_ranks["H"] = []
+        is_flush_ranks["C"] = []
         flag = True
-        total_point = h * 13 ** 5  # TODO fix
+        total_point = h * 13 ** 5
         for card in list_cards:
             if card[1] in is_flush.keys():
                 is_flush[card[1]] += 1
+                is_flush_ranks[card[1]].append(card)
             else:
                 is_flush[card[1]] = 1
+                is_flush_ranks[card[1]].append(card)
+
         if 5 not in is_flush.values() and 6 not in is_flush.values() and 7 not in is_flush.values():
             flag = False
+        else:
+            for card in list_cards:
+                if is_flush[card[1]] > 4:
+                    total_point += self.point(is_flush_ranks[card[1]])
+                    break
 
         if flag:
             print('Flush')
             self.tlist.append(total_point)
+
         else:
             self.is_straight(sortedHand)
 
@@ -612,10 +690,10 @@ class Poker(object):  # the whole game mechanics
         list_ranks = []
         for card in list_cards:
             list_ranks.append(card[0])
-
+        straight_hand = []
         flag = True
         h = 5
-        total_point = h * 13 ** 5  # TODO fix
+        total_point = h * 13 ** 5
         index = 0
         for card in list_ranks:
 
@@ -630,6 +708,7 @@ class Poker(object):  # the whole game mechanics
                     index += 1
                 else:
                     flag = True
+                    straight_hand = straight
                     break
             else:
                 straight1 = [card, card - 1, card - 2, card - 3, card - 4]
@@ -648,34 +727,55 @@ class Poker(object):  # the whole game mechanics
                     index += 1
                 else:
                     flag = True
+                    if res1 is True:
+                        straight_hand = straight1
+                    else:
+                        straight_hand = straight2
                     break
             if index == 3:
                 flag = False
                 break
         if flag:
             print('Straight')
+            total_point += self.point_straight(straight_hand)
             self.tlist.append(total_point)
+
         else:
             self.isThree(sortedHand)
 
     def isThree(self, hand):
         sortedHand = self.sort_hand(hand)
-        # listcards = list(sortedHand.keys())
+        listcards = list(sortedHand.keys())
         flag = True
         h = 4
-        total_point = h * 13 ** 5
         isThree = {}
+
+        for i in range(14):
+            isThree[i + 1] = []
+
         total_point = h * 13 ** 5  # fix
         for card in sortedHand:
-            if card[0] in isThree.keys():
-                isThree[card[0]] += 1
-            else:
-                isThree[card[0]] = 1
+            isThree[card[0]].append(card)
 
-        if 3 not in isThree.values():
+        if 3 != len(isThree.values()):
             flag = False
             self.isTwo(sortedHand)
         else:
+            three_of_a_kind = []
+            for key in isThree:
+                if len(isThree[key]) == 3:
+                    three_of_a_kind.extend(isThree[key])
+                    break
+
+            temp = 0
+            for card in listcards:
+                if card not in three_of_a_kind:
+                    three_of_a_kind.append(card)
+                    temp += 1
+                    if temp == 2:
+                        break
+            print(three_of_a_kind)
+            total_point += self.point_order(three_of_a_kind)
             print("Three of a Kind")
             self.tlist.append(total_point)
 
@@ -685,26 +785,42 @@ class Poker(object):  # the whole game mechanics
         """
         sortedHand = self.sort_hand(hand)
         list_cards = list(sortedHand.keys())
+        list_keys = []
+        list_two_pair = []
         flag = True
         h = 3
         total_point = h * 13 ** 5
         isTwoPair = {}
+        for i in range(14):
+            isTwoPair[i + 1] = []
+
         for card in sortedHand:
-            if card[0] in isTwoPair.keys():
-                isTwoPair[card[0]] += 1
-            else:
-                isTwoPair[card[0]] = 1
+            isTwoPair[card[0]].append(card)
 
         count2 = 0
         for card in isTwoPair.keys():
-            if isTwoPair[card] == 2:
+            if len(isTwoPair[card]) == 2:
+                list_keys.append(card)
                 count2 += 1
         if count2 < 2:
             flag = False
-        else:
-            flag = True
         if flag:
+
             print("Two Pair")
+            list_keys.sort(reverse=True)
+            for i in range(2):
+                list_two_pair.extend(isTwoPair[list_keys[i]])
+
+            temp = 0
+            for card in list_cards:
+                if card[0] not in list_keys:
+                    list_two_pair.append(card)
+                    temp += 1
+                    if temp == 1:
+                        break
+            total_point += self.point_order(list_two_pair)
+            self.tlist.append(total_point)
+
         else:
             self.is_one(sortedHand)
 
@@ -714,26 +830,37 @@ class Poker(object):  # the whole game mechanics
         """
         sorted_hand = self.sort_hand(hand)
         list_cards = list(sorted_hand.keys())
+        list_pairs = []
         flag = True
         h = 2
-        total_point = h * 13 ** 5  # TODO fix
+        total_point = h * 13 ** 5
         isPair = {}
+        for i in range(14):
+            isPair[i + 1] = []
         for card in sorted_hand:
-            if card[0] in isPair.keys():
-                isPair[card[0]] += 1
-            else:
-                isPair[card[0]] = 1
+            isPair[card[0]].append(card)
 
         count2 = 0
         for card in isPair.keys():
-            if isPair[card] == 2:
+            if len(isPair[card]) == 2:
+                list_pairs.extend(isPair[card])
                 count2 += 1
+                break
         if count2 == 0:
             flag = False
             self.is_high(sorted_hand)
         else:
             flag = True
             print("One Pair")
+            temp = 0
+            for card in list_cards:
+                if card[0] not in list_pairs:
+                    list_pairs.append(card)
+                    temp += 1
+                    if temp == 3:
+                        break
+
+            total_point += self.point_order(list_pairs)
             self.tlist.append(total_point)
 
     def is_high(self, hand):
@@ -741,14 +868,47 @@ class Poker(object):  # the whole game mechanics
         returns the total_point and prints out 'High Card'
         """
         sortedHand = self.sort_hand(hand)
-        # listcards = list(sortedHand.keys())
+        listcards = list(sortedHand.keys())
         flag = True
         h = 1
-        total_point = h * 13 ** 5  # TODO fix
+        total_point = (listcards[0])[0] * 13 ** 4 + (listcards[1])[0] * 13 ** 3 + (listcards[2])[0] * 13 ** 2 + \
+                      (listcards[3])[0] * 13 + (listcards[4])[0]
         print("High Card")
         self.tlist.append(total_point)
 
+    def winner_of_game(self):
+        dict_players = {}
+
+        print(self.tlist)
+        index = 0
+        for player in self.players:
+            print(player.hand)
+            dict_players[self.tlist[index]] = []
+            index += 1
+        index = 0
+        for player in self.players:
+            dict_players[self.tlist[index]].append(player)
+            index += 1
+
+        self.tlist.sort(reverse=True)
+
+        winner = dict_players[self.tlist[0]]
+        return winner
+
     def end_game(self):
+        winner = self.winner_of_game()
+        for player in self.players:
+            player.send_winner(winner)
+        if len(winner) == 1:
+            print("the winner is ", winner[0].name)
+            print(self.sum_money)
+            winner[0].send_sum_money(self.sum_money)
+        else:
+            print("the winners are: ")
+            for player in winner:
+                print("player : ", player.name)
+                player.send_sum_money(self.sum_money // len(winner))
+
         savedCard = list(self.save_cards.keys())
         for card in savedCard:
             self.deck.deck[card] = self.save_cards[card]
@@ -759,15 +919,14 @@ class Poker(object):  # the whole game mechanics
         self.tlist = []  # create a list to store total_point
         self.save_cards = {}
         self.flop = {}
+        self.sum_money = 0
 
 
-def test_poker_logic():
-    Game = Poker(3)
-    i = 0
-    Game.play()
-    Game.end_game()
-    print("\n \n")
-    Game = Poker(3)
+
+def test_poker_logic(connections):
+    game = Poker(connections)
+    game.play()
+    game.end_game()
 
 
 if __name__ == '__main__':
